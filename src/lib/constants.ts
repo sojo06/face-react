@@ -1,0 +1,1 @@
+export const origin:String = "http://localhost:5000"
