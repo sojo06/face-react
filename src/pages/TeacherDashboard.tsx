@@ -40,9 +40,12 @@ export default function TeacherDashboard() {
     fromTime: "",
     toTime: "",
   });
-  const [newStudent, setNewStudent] = useState({
+  const [newStudent, setNewStudent] = useState<{
+    studentid: string;
+    files: File[];
+  }>({
     studentid: "",
-    files: null as FileList | null,
+    files: [],
   });
 
   const [department, setDepartment] = useState("")
@@ -111,7 +114,7 @@ export default function TeacherDashboard() {
       });
       
       toast.success("Images uploaded successfully");
-      setNewStudent({ studentid: "", files: null });
+      setNewStudent({ studentid: "", files: [] });
     } catch (err) {
       console.error(err);
       toast.error("Image upload failed");
@@ -268,31 +271,10 @@ export default function TeacherDashboard() {
 
         {activeTab === "students" && (
           <div>
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-2xl font-bold">Manage Students</h2>
-              <input
-                type="text"
-                value={newStudent.studentid}
-                onChange={(e) => setNewStudent({ ...newStudent, studentid: e.target.value })}
-                placeholder="Student ID"
-                className="border p-2 rounded mr-2"
-              />
-              <input
-                type="file"
-                multiple
-                onChange={(e) => setNewStudent({ ...newStudent, files: e.target.files })}
-                className="mr-2"
-              />
-              <button
-                className="bg-indigo-600 text-white px-4 py-2 rounded-lg"
-                onClick={handleImageUpload}
-              >
-                Upload Images
-                
-              </button>
-            </div>
+             <h2 className="text-2xl font-bold">Manage Students</h2>
+
             <div>
-              <label className="block text-sm mb-1">Department</label>
+              <label className="block text-sm mt-8 mb-1">Department</label>
               <input
                 type="text"
                 value={department}
@@ -376,8 +358,35 @@ export default function TeacherDashboard() {
                 </table>
               </div>
             )}
-            <div className="flex justify-between items-center mt-6">
-              <h2 className="text-2xl font-bold">Training Data</h2>
+            <div className=" mb-6 mt-6">
+              <h2 className="text-2xl font-bold ">Add Student</h2>
+              <input
+                type="text"
+                value={newStudent.studentid}
+                onChange={(e) => setNewStudent({ ...newStudent, studentid: e.target.value })}
+                placeholder="Student ID"
+                className="border p-2 rounded mr-2 mt-10"
+              />
+            <FileUpload
+                    
+                  onChange={(files) => setNewStudent({ ...newStudent, files: files || [] })}
+/>
+              {/* <input
+                type="file"
+                multiple
+                onChange={(e) => setNewStudent({ ...newStudent, files: e.target.files })}
+                className="mr-2"
+              /> */}
+              <button
+                className="bg-indigo-600 text-white px-4 py-2 rounded-lg"
+                onClick={handleImageUpload}
+              >
+                Upload Images
+                
+              </button>
+            </div>
+            <div className="flex justify-between items-center mt-10">
+              <h2 className="text-2xl font-bold">Training </h2>
               <button
                 className="bg-indigo-600 text-white px-4 py-2 rounded-lg"
                 onClick={handleTrainClick}
