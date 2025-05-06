@@ -1,12 +1,13 @@
-
-import  { useState } from "react";
+import { useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
-import { Camera, Users, Calendar, LogOut,Clock } from "lucide-react";
+import { Camera, Users, Calendar, LogOut, Clock } from "lucide-react";
 import { origin } from "@/lib/constants";
 import dayjs from "dayjs";
 import { toast } from "react-hot-toast";
 import { FileUpload } from "@/components/ui/file-upload";
+import Webcam from "react-webcam"; // ✅ NEW
+import  { useRef } from "react";
 
 interface Student {
   student: {
@@ -30,11 +31,16 @@ interface AttendanceRecord {
 }
 
 export default function TeacherDashboard() {
-  const [activeTab, setActiveTab] = useState<"attendance" | "students" | "training" | "history">("attendance");
+  const webcamRef = useRef<Webcam>(null);
+  const [activeTab, setActiveTab] = useState<
+    "attendance" | "students" | "training" | "history"
+  >("attendance");
   const [classSummary, setClassSummary] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
-  const [attendanceHistory, setAttendanceHistory] = useState<AttendanceRecord[]>([]);
+  const [attendanceHistory, setAttendanceHistory] = useState<
+    AttendanceRecord[]
+  >([]);
   const [historyQuery, setHistoryQuery] = useState({
     date: "",
     fromTime: "",
@@ -48,7 +54,7 @@ export default function TeacherDashboard() {
     files: [],
   });
 
-  const [department, setDepartment] = useState("")
+  const [department, setDepartment] = useState("");
   const [division, setDivision] = useState("");
 
   const [attendanceFile, setAttendanceFile] = useState<File | null>(null);
@@ -59,6 +65,37 @@ export default function TeacherDashboard() {
   //     fetchSummary();
   //   }
   // }, [activeTab]);
+  const handleCaptureAndUpload = async () => {
+    if (!webcamRef.current) return;
+
+    const screenshot = webcamRef.current.getScreenshot();
+    if (!screenshot) return toast.error("Failed to capture image");
+
+    const blob = await (await fetch(screenshot)).blob();
+    const formData = new FormData();
+    formData.append("image", blob, "webcam.jpg");
+
+    try {
+      setUploadingAttendance(true);
+      const res = await axios.post(
+        `${origin}/api/teacher/mark-attendance`,
+        formData,
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("authToken")}`,
+            "Content-Type": "multipart/form-data",
+          },
+        }
+      );
+      toast.success("Attendance marked successfully via webcam");
+      console.log(res.data);
+    } catch (err) {
+      console.error(err);
+      toast.error("Webcam attendance failed");
+    } finally {
+      setUploadingAttendance(false);
+    }
+  };
 
   const fetchSummary = async () => {
     try {
@@ -66,7 +103,8 @@ export default function TeacherDashboard() {
       const res = await axios.get(`${origin}/api/teacher/class-summary`, {
         headers: {
           Authorization: `Bearer ${localStorage.getItem("authToken")}`,
-        },params: {
+        },
+        params: {
           department: department,
           division: division,
         },
@@ -78,7 +116,7 @@ export default function TeacherDashboard() {
         toast.success("Class summary fetched successfully");
       }
       setLoading(false);
-      console.log(loading)
+      console.log(loading);
     } catch (error) {
       console.error("Error fetching summary:", error);
       toast.error("Failed to fetch class summary");
@@ -108,11 +146,11 @@ export default function TeacherDashboard() {
     try {
       await axios.post(`${origin}/api/teacher/upload-images`, formData, {
         headers: {
-          "Authorization": `Bearer ${localStorage.getItem("authToken")}`,
+          Authorization: `Bearer ${localStorage.getItem("authToken")}`,
           "Content-Type": "multipart/form-data",
         },
       });
-      
+
       toast.success("Images uploaded successfully");
       setNewStudent({ studentid: "", files: [] });
     } catch (err) {
@@ -123,12 +161,16 @@ export default function TeacherDashboard() {
 
   const handleTrainClick = async () => {
     try {
-      const res = await axios.post(`${origin}/api/teacher/train-all`, {}, {
-        headers: {
-          "Authorization": `Bearer ${localStorage.getItem("authToken")}`,
-        },
-      });
-      
+      const res = await axios.post(
+        `${origin}/api/teacher/train-all`,
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("authToken")}`,
+          },
+        }
+      );
+
       toast.success(res.data.message);
     } catch (err) {
       console.error(err);
@@ -148,12 +190,16 @@ export default function TeacherDashboard() {
 
     try {
       setUploadingAttendance(true);
-      const res = await axios.post(`${origin}/api/teacher/mark-attendance`, formData, {
-        headers: {
-          "Authorization": `Bearer ${localStorage.getItem("authToken")}`,
-          "Content-Type": "multipart/form-data",
-        },
-      });
+      const res = await axios.post(
+        `${origin}/api/teacher/mark-attendance`,
+        formData,
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("authToken")}`,
+            "Content-Type": "multipart/form-data",
+          },
+        }
+      );
 
       toast.success("Attendance marked successfully");
       console.log(res.data);
@@ -166,10 +212,13 @@ export default function TeacherDashboard() {
     }
   };
   const downloadCSV = () => {
-    if (attendanceHistory.length === 0) return toast.error("No data to download");
+    if (attendanceHistory.length === 0)
+      return toast.error("No data to download");
 
     const header = "Name,Roll Number,Email,Time\n";
-    const rows = attendanceHistory.map(s => `${s.name},${s.uid},${s.email},${s.time}`).join("\n");
+    const rows = attendanceHistory
+      .map((s) => `${s.name},${s.uid},${s.email},${s.time}`)
+      .join("\n");
     const csvContent = "data:text/csv;charset=utf-8," + header + rows;
 
     const encodedUri = encodeURI(csvContent);
@@ -182,11 +231,14 @@ export default function TeacherDashboard() {
   };
   const fetchAttendanceHistory = async () => {
     const { date, fromTime, toTime } = historyQuery;
-    if (!date || !fromTime || !toTime) return toast.error("Please fill all fields");
+    if (!date || !fromTime || !toTime)
+      return toast.error("Please fill all fields");
 
     try {
       const res = await axios.get(`${origin}/api/teacher/attendance-history`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem("authToken")}` },
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("authToken")}`,
+        },
         params: { date, fromTime, toTime },
       });
       setAttendanceHistory(res.data.records);
@@ -215,7 +267,9 @@ export default function TeacherDashboard() {
             <button
               onClick={() => setActiveTab("attendance")}
               className={`flex items-center space-x-2 w-full p-3 rounded-lg ${
-                activeTab === "attendance" ? "bg-indigo-50 text-indigo-600" : "hover:bg-gray-50"
+                activeTab === "attendance"
+                  ? "bg-indigo-50 text-indigo-600"
+                  : "hover:bg-gray-50"
               }`}
             >
               <Calendar className="w-5 h-5" />
@@ -224,13 +278,22 @@ export default function TeacherDashboard() {
             <button
               onClick={() => setActiveTab("students")}
               className={`flex items-center space-x-2 w-full p-3 rounded-lg ${
-                activeTab === "students" ? "bg-indigo-50 text-indigo-600" : "hover:bg-gray-50"
+                activeTab === "students"
+                  ? "bg-indigo-50 text-indigo-600"
+                  : "hover:bg-gray-50"
               }`}
             >
               <Users className="w-5 h-5" />
               <span>Manage Students</span>
             </button>
-            <button onClick={() => setActiveTab("history")} className={`flex items-center space-x-2 w-full p-3 rounded-lg ${activeTab === "history" ? "bg-indigo-50 text-indigo-600" : "hover:bg-gray-50"}`}>
+            <button
+              onClick={() => setActiveTab("history")}
+              className={`flex items-center space-x-2 w-full p-3 rounded-lg ${
+                activeTab === "history"
+                  ? "bg-indigo-50 text-indigo-600"
+                  : "hover:bg-gray-50"
+              }`}
+            >
               <Clock className="w-5 h-5" />
               <span>Attendance History</span>
             </button>
@@ -248,30 +311,67 @@ export default function TeacherDashboard() {
       {/* Main Content */}
       <div className="flex-1 bg-gray-50 p-8 overflow-auto">
         {activeTab === "attendance" && (
-          <div>
-            <div className=" justify-between items-center mb-6">
-              <h2 className="text-2xl font-bold">Take Attendance</h2>
-              <div className=" gap-2 items-center">
-                <FileUpload
-                  
-                  onChange={(files) => setAttendanceFile(files?.[0] || null)}
-                />
-                <button
-                  onClick={handleAttendanceFileUpload}
-                  className="bg-indigo-600 text-white px-4 py-2 rounded-lg flex items-center space-x-2 disabled:opacity-50 hover:bg-indigo-900"
-                  disabled={uploadingAttendance}
-                >
-                  <Camera className="w-5 h-5" />
-                  <span>{uploadingAttendance ? "Uploading..." : "Upload & Mark"}</span>
-                </button>
-              </div>
+          // <div>
+          //   <div className=" justify-between items-center mb-6">
+          //     <h2 className="text-2xl font-bold">Take Attendance</h2>
+          //     <div className=" gap-2 items-center">
+          //       <FileUpload
+
+          //         onChange={(files) => setAttendanceFile(files?.[0] || null)}
+          //       />
+          //       <button
+          //         onClick={handleAttendanceFileUpload}
+          //         className="bg-indigo-600 text-white px-4 py-2 rounded-lg flex items-center space-x-2 disabled:opacity-50 hover:bg-indigo-900"
+          //         disabled={uploadingAttendance}
+          //       >
+          //         <Camera className="w-5 h-5" />
+          //         <span>{uploadingAttendance ? "Uploading..." : "Upload & Mark"}</span>
+          //       </button>
+          //     </div>
+          //   </div>
+          // </div>
+          <div className="flex flex-col md:flex-row justify-around gap-4 ">
+            <div className="flex flex-col items-center">
+              <FileUpload
+                onChange={(files) => setAttendanceFile(files?.[0] || null)}
+              />
+              <button
+                onClick={handleAttendanceFileUpload}
+                className="bg-indigo-600 text-white px-4 py-2 rounded-lg flex items-center space-x-2 disabled:opacity-50 hover:bg-indigo-900 mt-2"
+                disabled={uploadingAttendance}
+              >
+                <Camera className="w-5 h-5" />
+                <span>
+                  {uploadingAttendance ? "Uploading..." : "Upload & Mark"}
+                </span>
+              </button>
+            </div>
+
+            <div className="flex flex-col items-center">
+              <Webcam
+                ref={webcamRef}
+                screenshotFormat="image/jpeg"
+                className="rounded-md border border-gray-300"
+                width={500}
+                height={500}
+              />
+              <button
+                onClick={handleCaptureAndUpload}
+                className="mt-2 bg-green-600 text-white px-4 py-2 rounded-lg flex items-center space-x-2 hover:bg-green-800 disabled:opacity-50"
+                disabled={uploadingAttendance}
+              >
+                <Camera className="w-5 h-5" />
+                <span>
+                  {uploadingAttendance ? "Uploading..." : "Capture & Mark"}
+                </span>
+              </button>
             </div>
           </div>
         )}
 
         {activeTab === "students" && (
           <div>
-             <h2 className="text-2xl font-bold">Manage Students</h2>
+            <h2 className="text-2xl font-bold">Manage Students</h2>
 
             <div>
               <label className="block text-sm mt-8 mb-1">Department</label>
@@ -296,7 +396,6 @@ export default function TeacherDashboard() {
               >
                 Fetch Students
               </button>
-                
             </div>
             {loading ? (
               <p></p>
@@ -326,7 +425,9 @@ export default function TeacherDashboard() {
                         <td className="px-6 py-4">{student.totalUploads}</td>
                         <td className="px-4 py-3">
                           {student.lastUpload
-                            ? dayjs(student.lastUpload).format("DD MMM YYYY, HH:mm")
+                            ? dayjs(student.lastUpload).format(
+                                "DD MMM YYYY, HH:mm"
+                              )
                             : "No uploads yet"}
                         </td>
                         <td className="px-4 py-3">
@@ -342,14 +443,16 @@ export default function TeacherDashboard() {
                         </td>
                         <td className="px-4 py-3">
                           <div className="flex gap-2 flex-wrap">
-                            {student.images?.slice(0, 3).map((img: string, idx: number) => (
-                              <img
-                                key={idx}
-                                src={img}
-                                alt="upload"
-                                className="w-10 h-10 object-cover rounded border border-gray-600"
-                              />
-                            ))}
+                            {student.images
+                              ?.slice(0, 3)
+                              .map((img: string, idx: number) => (
+                                <img
+                                  key={idx}
+                                  src={img}
+                                  alt="upload"
+                                  className="w-10 h-10 object-cover rounded border border-gray-600"
+                                />
+                              ))}
                           </div>
                         </td>
                       </tr>
@@ -363,14 +466,17 @@ export default function TeacherDashboard() {
               <input
                 type="text"
                 value={newStudent.studentid}
-                onChange={(e) => setNewStudent({ ...newStudent, studentid: e.target.value })}
+                onChange={(e) =>
+                  setNewStudent({ ...newStudent, studentid: e.target.value })
+                }
                 placeholder="Student ID"
                 className="border p-2 rounded mr-2 mt-10"
               />
-            <FileUpload
-                    
-                  onChange={(files) => setNewStudent({ ...newStudent, files: files || [] })}
-/>
+              <FileUpload
+                onChange={(files) =>
+                  setNewStudent({ ...newStudent, files: files || [] })
+                }
+              />
               {/* <input
                 type="file"
                 multiple
@@ -382,7 +488,6 @@ export default function TeacherDashboard() {
                 onClick={handleImageUpload}
               >
                 Upload Images
-                
               </button>
             </div>
             <div className="flex justify-between items-center mt-10">
@@ -396,25 +501,59 @@ export default function TeacherDashboard() {
             </div>
           </div>
         )}
-        
+
         {activeTab === "history" && (
           <div>
             <h2 className="text-2xl font-bold mb-6">Attendance History</h2>
             <div className="flex gap-4 mb-4 items-end">
               <div>
                 <label className="block text-sm mb-1">Date</label>
-                <input type="date" value={historyQuery.date} onChange={e => setHistoryQuery({ ...historyQuery, date: e.target.value })} className="border p-2 rounded" />
+                <input
+                  type="date"
+                  value={historyQuery.date}
+                  onChange={(e) =>
+                    setHistoryQuery({ ...historyQuery, date: e.target.value })
+                  }
+                  className="border p-2 rounded"
+                />
               </div>
               <div>
                 <label className="block text-sm mb-1">From Time</label>
-                <input type="time" value={historyQuery.fromTime} onChange={e => setHistoryQuery({ ...historyQuery, fromTime: e.target.value })} className="border p-2 rounded" />
+                <input
+                  type="time"
+                  value={historyQuery.fromTime}
+                  onChange={(e) =>
+                    setHistoryQuery({
+                      ...historyQuery,
+                      fromTime: e.target.value,
+                    })
+                  }
+                  className="border p-2 rounded"
+                />
               </div>
               <div>
                 <label className="block text-sm mb-1">To Time</label>
-                <input type="time" value={historyQuery.toTime} onChange={e => setHistoryQuery({ ...historyQuery, toTime: e.target.value })} className="border p-2 rounded" />
+                <input
+                  type="time"
+                  value={historyQuery.toTime}
+                  onChange={(e) =>
+                    setHistoryQuery({ ...historyQuery, toTime: e.target.value })
+                  }
+                  className="border p-2 rounded"
+                />
               </div>
-              <button onClick={fetchAttendanceHistory} className="bg-indigo-600 text-white px-4 py-2 rounded-lg">Fetch</button>
-              <button onClick={downloadCSV} className="bg-green-600 text-white px-4 py-2 rounded-lg">Export CSV</button>
+              <button
+                onClick={fetchAttendanceHistory}
+                className="bg-indigo-600 text-white px-4 py-2 rounded-lg"
+              >
+                Fetch
+              </button>
+              <button
+                onClick={downloadCSV}
+                className="bg-green-600 text-white px-4 py-2 rounded-lg"
+              >
+                Export CSV
+              </button>
             </div>
             {attendanceHistory.length > 0 ? (
               <div className="bg-white p-4 rounded shadow">
@@ -422,7 +561,7 @@ export default function TeacherDashboard() {
                   <thead className="bg-gray-50">
                     <tr>
                       <th className="px-4 py-3 text-left">Name</th>
-                       <th className="px-4 py-3 text-left">Time</th>
+                      <th className="px-4 py-3 text-left">Time</th>
 
                       <th className="px-4 py-3 text-left">Email</th>
                       <th className="px-4 py-3 text-left">uid</th>
