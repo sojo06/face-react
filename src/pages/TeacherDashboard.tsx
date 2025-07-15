@@ -490,30 +490,53 @@ export default function TeacherDashboard() {
     )}
 
     <Card className="p-6">
-      <h2 className="text-2xl font-bold mb-4">Add Student</h2>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <input
-          type="text"
-          value={newStudent.studentid}
-          onChange={(e) =>
-            setNewStudent({ ...newStudent, studentid: e.target.value })
-          }
-          placeholder="Student ID"
-          className="border p-2 rounded"
-        />
-        <FileUpload
-          onChange={(files) =>
-            setNewStudent({ ...newStudent, files: files || [] })
-          }
-        />
-      </div>
-      <button
-        className="mt-4 bg-indigo-600 text-white px-4 py-2 rounded-lg"
-        onClick={handleImageUpload}
-      >
-        Upload Images
-      </button>
-    </Card>
+  <h2 className="text-2xl font-bold mb-4">Add Student</h2>
+  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <input
+      type="text"
+      value={newStudent.studentid}
+      onChange={(e) =>
+        setNewStudent({ ...newStudent, studentid: e.target.value })
+      }
+      placeholder="Student ID"
+      className="border p-2 rounded"
+    />
+
+    <div>
+      <label className="block mb-2 text-sm font-medium text-gray-300">
+        Upload Student Images
+      </label>
+      <input
+        type="file"
+        accept="image/*"
+        multiple
+        className="block w-full text-sm text-gray-200 file:mr-4 file:py-2 file:px-4
+                   file:rounded-lg file:border-0 file:text-sm file:font-semibold
+                   file:bg-indigo-600 file:text-white hover:file:bg-indigo-500"
+        onChange={(e) => {
+          const files = Array.from(e.target.files || []);
+          setNewStudent({ ...newStudent, files });
+        }}
+      />
+      {newStudent.files.length > 0 && (
+        <ul className="mt-2 text-sm text-gray-400 list-disc list-inside">
+          {newStudent.files.map((file, idx) => (
+            <li key={idx}>📄 {file.name}</li>
+          ))}
+        </ul>
+      )}
+    </div>
+  </div>
+
+  <button
+    className="mt-4 bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-500 disabled:opacity-50"
+    onClick={handleImageUpload}
+    disabled={!newStudent.studentid || newStudent.files.length === 0}
+  >
+    Upload Images
+  </button>
+</Card>
+
 
     <div className="flex justify-between items-center mt-6">
       <h2 className="text-2xl font-bold">Training</h2>
