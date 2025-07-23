@@ -3,27 +3,27 @@ import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { Camera, Users, Calendar, LogOut, Clock } from "lucide-react";
 import { origin } from "@/lib/constants";
-import dayjs from "dayjs";
+// import dayjs from "dayjs";
 import { toast } from "react-hot-toast";
 import { FileUpload } from "@/components/ui/file-upload";
 import Webcam from "react-webcam"; // ✅ NEW
 import  { useRef } from "react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 
-interface Student {
-  student: {
-    _id: string;
-    name: string;
-    email: string;
-    rollNumber: string;
-    department: string;
-    division: string;
-  };
-  totalUploads: number;
-  images: string[];
-  lastUpload: string;
-  status: string;
-}
+// interface Student {
+//   student: {
+//     _id: string;
+//     name: string;
+//     email: string;
+//     rollNumber: string;
+//     department: string;
+//     division: string;
+//   };
+//   totalUploads: number;
+//   images: string[];
+//   lastUpload: string;
+//   status: string;
+// }
 interface AttendanceRecord {
   name: string;
   uid: string;
@@ -36,8 +36,8 @@ export default function TeacherDashboard() {
   const [activeTab, setActiveTab] = useState<
     "attendance" | "students" | "training" | "history"
   >("attendance");
-  const [classSummary, setClassSummary] = useState<Student[]>([]);
-  const [loading, setLoading] = useState(true);
+  // const [classSummary, setClassSummary] = useState<Student[]>([]);
+  // const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
   const [attendanceHistory, setAttendanceHistory] = useState<
     AttendanceRecord[]
@@ -47,17 +47,21 @@ export default function TeacherDashboard() {
     fromTime: "",
     toTime: "",
   });
-  const [newStudent, setNewStudent] = useState<{
-    studentid: string;
-    files: File[];
-  }>({
-    studentid: "",
-    files: [],
-  });
+  const [modelFile, setModelFile] = useState<File | null>(null);
+  const [uploadDepartment, setUploadDepartment] = useState("");
+  const [uploadDivision, setUploadDivision] = useState("");
+  const [isUploading, setIsUploading] = useState(false);
 
-  const [department, setDepartment] = useState("");
-  const [division, setDivision] = useState("");
+  // const [newStudent, setNewStudent] = useState<{
+  //   studentid: string;
+  //   files: File[];
+  // }>({
+  //   studentid: "",
+  //   files: [],
+  // });
 
+  // const [department, setDepartment] = useState("");
+  // const [division, setDivision] = useState("")
   const [attendanceFile, setAttendanceFile] = useState<File | null>(null);
   const [uploadingAttendance, setUploadingAttendance] = useState(false);
 
@@ -97,33 +101,72 @@ export default function TeacherDashboard() {
       setUploadingAttendance(false);
     }
   };
+ 
+  const handleModelUpload = async () => {
+    if (!modelFile || !uploadDepartment || !uploadDivision) {
+      toast.error("Please select a file and enter department & division.");
+      return;
+    }
 
-  const fetchSummary = async () => {
+    const formData = new FormData();
+    formData.append("model", modelFile);
+    formData.append("department", uploadDepartment);
+    formData.append("division", uploadDivision);
+
     try {
-      setLoading(true);
-      const res = await axios.get(`${origin}/api/teacher/class-summary`, {
+      setIsUploading(true);
+
+     
+
+      const res = await axios.post(`${origin}/api/teacher/upload-model`, formData, {
         headers: {
           Authorization: `Bearer ${localStorage.getItem("authToken")}`,
-        },
-        params: {
-          department: department,
-          division: division,
+          "Content-Type": "multipart/form-data",
         },
       });
-      setClassSummary(res.data.students);
-      if (res.data.students.length === 0) {
-        toast.error("No students found for the given department and division.");
+
+      if (res.status === 200) {
+        toast.success("Model uploaded successfully!");
+        setModelFile(null);
+        setUploadDepartment("");
+        setUploadDivision("");
       } else {
-        toast.success("Class summary fetched successfully");
+        toast.error("Model upload failed.");
       }
-      setLoading(false);
-      console.log(loading);
-    } catch (error) {
-      console.error("Error fetching summary:", error);
-      toast.error("Failed to fetch class summary");
-      setLoading(true);
+    } catch (error: any) {
+      console.error("Error uploading model:", error);
+      toast.error(error?.response?.data?.error || "Error uploading model.");
+    } finally {
+      setIsUploading(false);
     }
   };
+
+  // const fetchSummary = async () => {
+  //   try {
+  //     setLoading(true);
+  //     const res = await axios.get(`${origin}/api/teacher/class-summary`, {
+  //       headers: {
+  //         Authorization: `Bearer ${localStorage.getItem("authToken")}`,
+  //       },
+  //       params: {
+  //         department: department,
+  //         division: division,
+  //       },
+  //     });
+  //     setClassSummary(res.data.students);
+  //     if (res.data.students.length === 0) {
+  //       toast.error("No students found for the given department and division.");
+  //     } else {
+  //       toast.success("Class summary fetched successfully");
+  //     }
+  //     setLoading(false);
+  //     console.log(loading);
+  //   } catch (error) {
+  //     console.error("Error fetching summary:", error);
+  //     toast.error("Failed to fetch class summary");
+  //     setLoading(true);
+  //   }
+  // };
 
   const handleLogout = () => {
     localStorage.removeItem("authToken");
@@ -132,52 +175,52 @@ export default function TeacherDashboard() {
     navigate("/login");
   };
 
-  const handleImageUpload = async () => {
-    if (!newStudent.studentid || !newStudent.files?.length) {
-      return toast.error("Please enter student ID and select images");
-    }
+  // const handleImageUpload = async () => {
+  //   if (!newStudent.studentid || !newStudent.files?.length) {
+  //     return toast.error("Please enter student ID and select images");
+  //   }
 
-    const formData = new FormData();
-    for (let i = 0; i < newStudent.files.length; i++) {
-      formData.append("files", newStudent.files[i]);
-    }
-    formData.append("studentId", newStudent.studentid);
-    formData.append("uploadedBy", "teacher");
+  //   const formData = new FormData();
+  //   for (let i = 0; i < newStudent.files.length; i++) {
+  //     formData.append("files", newStudent.files[i]);
+  //   }
+  //   formData.append("studentId", newStudent.studentid);
+  //   formData.append("uploadedBy", "teacher");
 
-    try {
-      await axios.post(`${origin}/api/teacher/upload-images`, formData, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("authToken")}`,
-          "Content-Type": "multipart/form-data",
-        },
-      });
+  //   try {
+  //     await axios.post(`${origin}/api/teacher/upload-images`, formData, {
+  //       headers: {
+  //         Authorization: `Bearer ${localStorage.getItem("authToken")}`,
+  //         "Content-Type": "multipart/form-data",
+  //       },
+  //     });
 
-      toast.success("Images uploaded successfully");
-      setNewStudent({ studentid: "", files: [] });
-    } catch (err) {
-      console.error(err);
-      toast.error("Image upload failed");
-    }
-  };
+  //     toast.success("Images uploaded successfully");
+  //     setNewStudent({ studentid: "", files: [] });
+  //   } catch (err) {
+  //     console.error(err);
+  //     toast.error("Image upload failed");
+  //   }
+  // };
 
-  const handleTrainClick = async () => {
-    try {
-      const res = await axios.post(
-        `${origin}/api/teacher/train-all`,
-        {},
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("authToken")}`,
-          },
-        }
-      );
+  // const handleTrainClick = async () => {
+  //   try {
+  //     const res = await axios.post(
+  //       `${origin}/api/teacher/train-all`,
+  //       {},
+  //       {
+  //         headers: {
+  //           Authorization: `Bearer ${localStorage.getItem("authToken")}`,
+  //         },
+  //       }
+  //     );
 
-      toast.success(res.data.message);
-    } catch (err) {
-      console.error(err);
-      toast.error("Training failed");
-    }
-  };
+  //     toast.success(res.data.message);
+  //   } catch (err) {
+  //     console.error(err);
+  //     toast.error("Training failed");
+  //   }
+  // };
 
   const handleAttendanceFileUpload = async () => {
     if (!attendanceFile) {
@@ -392,182 +435,98 @@ export default function TeacherDashboard() {
 </Card>
           </div>
         )}
+      {activeTab === "students" && (
+  <div className="space-y-8 mt-8">
+    {/* Upload Card */}
+    <Card className="p-8 bg-white border border-gray-200 shadow-md rounded-lg">
+      <h2 className="text-3xl font-bold text-gray-800 mb-6">📤 Upload Trained Model</h2>
 
-{activeTab === "students" && (
-  <div className="space-y-8">
-    <div className="space-y-4">
-      <h2 className="text-2xl font-bold">Manage Students</h2>
-      <Card className="p-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium mb-1">Department</label>
-            <input
-              type="text"
-              value={department}
-              onChange={(e) => setDepartment(e.target.value)}
-              placeholder="Department"
-              className="w-full border p-2 rounded"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">Division</label>
-            <input
-              type="text"
-              value={division}
-              onChange={(e) => setDivision(e.target.value)}
-              placeholder="Division"
-              className="w-full border p-2 rounded"
-            />
-          </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Department */}
+        <div>
+          <label className="block mb-2 text-sm font-medium text-gray-700">Department</label>
+          <input
+            type="text"
+            value={uploadDepartment}
+            onChange={(e) => setUploadDepartment(e.target.value)}
+            placeholder="e.g., CS"
+            className="w-full px-4 py-2 rounded-md border border-gray-300 bg-white text-gray-800 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+          />
         </div>
-        <div className="mt-4">
-          <button
-            className="bg-indigo-600 text-white px-4 py-2 rounded-lg"
-            onClick={fetchSummary}
-          >
-            Fetch Students
-          </button>
+
+        {/* Division */}
+        <div>
+          <label className="block mb-2 text-sm font-medium text-gray-700">Division</label>
+          <input
+            type="text"
+            value={uploadDivision}
+            onChange={(e) => setUploadDivision(e.target.value)}
+            placeholder="e.g., A"
+            className="w-full px-4 py-2 rounded-md border border-gray-300 bg-white text-gray-800 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+          />
         </div>
-      </Card>
-    </div>
+      </div>
 
-    {loading ? (
-      <p>Loading...</p>
-    ) : (
-      <Card className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200 text-sm">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-4 py-3 text-left">Name</th>
-              <th className="px-4 py-3 text-left">UID</th>
-              <th className="px-4 py-3 text-left">Email</th>
-              <th className="px-4 py-3 text-left">Total Uploads</th>
-              <th className="px-4 py-3 text-left">Last Upload</th>
-              <th className="px-4 py-3 text-left">Status</th>
-              <th className="px-4 py-3 text-left">Images</th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200 text-black">
-            {classSummary.map((student) => (
-              <tr key={student.student._id}>
-                <td className="px-4 py-3">{student.student.name}</td>
-                <td className="px-4 py-3">{student.student._id}</td>
-                <td className="px-4 py-3">{student.student.email}</td>
-                <td className="px-4 py-3">{student.totalUploads}</td>
-                <td className="px-4 py-3">
-                  {student.lastUpload
-                    ? dayjs(student.lastUpload).format("DD MMM YYYY, HH:mm")
-                    : "No uploads yet"}
-                </td>
-                <td className="px-4 py-3">
-                  <span
-                    className={`px-2 py-1 rounded text-xs font-semibold ${
-                      student.status === "Processed"
-                        ? "bg-green-700 text-white"
-                        : "bg-yellow-600 text-white"
-                    }`}
-                  >
-                    {student.status}
-                  </span>
-                </td>
-                <td className="px-4 py-3">
-                  <div className="flex gap-2 flex-wrap">
-                    {student.images?.slice(0, 3).map((img, idx) => (
-                      <img
-                        key={idx}
-                        src={img}
-                        alt="upload"
-                        className="w-10 h-10 object-cover rounded border border-gray-300"
-                      />
-                    ))}
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </Card>
-    )}
+      {/* File Upload */}
+      <div className="mt-6">
+        <label className="block mb-2 text-sm font-medium text-gray-700">Upload `.pkl` Model File</label>
+        <input
+          type="file"
+          accept=".pkl"
+          className="block w-full text-sm text-gray-700 file:mr-4 file:py-2 file:px-4
+                     file:rounded-md file:border-0 file:text-sm file:font-medium
+                     file:bg-indigo-600 file:text-white hover:file:bg-indigo-500"
+          onChange={(e) => {
+            const file = e.target.files?.[0] || null;
+            setModelFile(file);
+          }}
+        />
+        {modelFile && (
+          <p className="mt-2 text-sm text-gray-600">📄 {modelFile.name}</p>
+        )}
+      </div>
 
-    <Card className="p-6">
-  <h2 className="text-2xl font-bold mb-4">Add Student</h2>
-  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-    <input
-      type="text"
-      value={newStudent.studentid}
-      onChange={(e) =>
-        setNewStudent({ ...newStudent, studentid: e.target.value })
-      }
-      placeholder="Student ID"
-      className="border p-2 rounded"
-    />
+      {/* Upload Button */}
+      <div className="mt-6 text-right">
+        <button
+          onClick={handleModelUpload}
+          disabled={!modelFile || !uploadDepartment || !uploadDivision || isUploading}
+          className={`px-6 py-2 rounded-md font-semibold text-white transition duration-200 ${
+            isUploading || !modelFile || !uploadDepartment || !uploadDivision
+              ? "bg-gray-400 cursor-not-allowed"
+              : "bg-indigo-600 hover:bg-indigo-500"
+          }`}
+        >
+          {isUploading ? "Uploading..." : "Upload Model"}
+        </button>
+      </div>
+    </Card>
 
-    <div>
-      <label className="block mb-2 text-sm font-medium text-gray-300">
-        Upload Student Images
-      </label>
-      <input
-        type="file"
-        accept="image/*"
-        multiple
-        className="block w-full text-sm text-gray-200 file:mr-4 file:py-2 file:px-4
-                   file:rounded-lg file:border-0 file:text-sm file:font-semibold
-                   file:bg-indigo-600 file:text-white hover:file:bg-indigo-500"
-        onChange={(e) => {
-          const files = Array.from(e.target.files || []);
-          setNewStudent({ ...newStudent, files });
-        }}
-      />
-      {newStudent.files.length > 0 && (
-        <ul className="mt-2 text-sm text-gray-400 list-disc list-inside">
-          {newStudent.files.map((file, idx) => (
-            <li key={idx}>📄 {file.name}</li>
-          ))}
-        </ul>
-      )}
-    </div>
-  </div>
-
-  <button
-    className="mt-4 bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-500 disabled:opacity-50"
-    onClick={handleImageUpload}
-    disabled={!newStudent.studentid || newStudent.files.length === 0}
-  >
-    Upload Images
-  </button>
-</Card>
-
-
-    <div className="flex justify-between items-center mt-6">
-      <h2 className="text-2xl font-bold">Training</h2>
-      <button
-        className="bg-indigo-600 text-white px-4 py-2 rounded-lg"
-        onClick={handleTrainClick}
-      >
-        Train All Students
-      </button>
-    </div>
-
-    <Card className="mt-4">
+    {/* Instruction Card */}
+    <Card className="p-6 bg-white border border-gray-200 shadow-sm rounded-lg">
       <CardHeader>
-        <h2 className="text-xl font-semibold">Training Data Instructions</h2>
+        <h2 className="text-xl font-semibold text-gray-800">📘 Model Upload Instructions</h2>
       </CardHeader>
       <CardContent>
-        <ul className="list-disc list-inside space-y-2 text-sm text-muted-foreground">
-          <li>Search for a student using their email ID.</li>
-          <li>If the student doesn't exist, a new record will be created automatically.</li>
-          <li>Upload 5–10 clear images showing the student's face from different angles.</li>
-          <li>Ensure good lighting and no occlusions (e.g., masks, hands).</li>
-          <li>After uploading images, click "Train Model" to update face recognition data.</li>
-          <li>Training can take a few minutes — wait for confirmation.</li>
-          <li>Re-train after uploading images for new or existing students.</li>
-          <li>Check the "Class Summary" tab to see which students have training data.</li>
+        <ul className="list-disc list-inside space-y-2 text-sm text-gray-700">
+          <li>Train your face recognition model externally (e.g., using Python + sklearn).</li>
+          <li>Ensure the model is saved as a `.pkl` file and supports inference properly.</li>
+          <li>Fill in Department and Division (e.g., CS, A).</li>
+          <li>Click the "Upload Model" button to upload the trained `.pkl` file to the server.</li>
+          <li>This model will be used to recognize faces in the uploaded student images.</li>
+          <li>You can replace/update the model anytime by uploading a new `.pkl` file.</li>
+          <li>Ensure model compatibility with your backend inference logic.</li>
+          <li>Once uploaded, test recognition via the "Mark Attendance" tab.</li>
         </ul>
       </CardContent>
     </Card>
   </div>
 )}
 
+
+
+       
+      
 
         {activeTab === "history" && (
           <div>
