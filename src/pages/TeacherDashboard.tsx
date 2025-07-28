@@ -5,9 +5,9 @@ import { Camera, Users, Calendar, LogOut, Clock } from "lucide-react";
 import { origin } from "@/lib/constants";
 // import dayjs from "dayjs";
 import { toast } from "react-hot-toast";
-import { FileUpload } from "@/components/ui/file-upload";
+// import { FileUpload } from "@/components/ui/file-upload";
 import Webcam from "react-webcam"; // ✅ NEW
-import  { useRef } from "react";
+import { useRef } from "react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 
 // interface Student {
@@ -62,7 +62,7 @@ export default function TeacherDashboard() {
 
   // const [department, setDepartment] = useState("");
   // const [division, setDivision] = useState("")
-  const [attendanceFile, setAttendanceFile] = useState<File | null>(null);
+  const [attendanceFile, setAttendanceFile] = useState<File[]>([]);
   const [uploadingAttendance, setUploadingAttendance] = useState(false);
 
   // useEffect(() => {
@@ -70,6 +70,13 @@ export default function TeacherDashboard() {
   //     fetchSummary();
   //   }
   // }, [activeTab]);
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files) {
+      setAttendanceFile(Array.from(files)); // Convert FileList to Array
+    }
+  };
+
   const handleCaptureAndUpload = async () => {
     if (!webcamRef.current) return;
 
@@ -101,7 +108,7 @@ export default function TeacherDashboard() {
       setUploadingAttendance(false);
     }
   };
- 
+
   const handleModelUpload = async () => {
     if (!modelFile || !uploadDepartment || !uploadDivision) {
       toast.error("Please select a file and enter department & division.");
@@ -116,14 +123,16 @@ export default function TeacherDashboard() {
     try {
       setIsUploading(true);
 
-     
-
-      const res = await axios.post(`${origin}/api/teacher/upload-model`, formData, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("authToken")}`,
-          "Content-Type": "multipart/form-data",
-        },
-      });
+      const res = await axios.post(
+        `${origin}/api/teacher/upload-model`,
+        formData,
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("authToken")}`,
+            "Content-Type": "multipart/form-data",
+          },
+        }
+      );
 
       if (res.status === 200) {
         toast.success("Model uploaded successfully!");
@@ -228,9 +237,9 @@ export default function TeacherDashboard() {
     }
 
     const formData = new FormData();
-    formData.append("image", attendanceFile);
-    // formData.append("department", "CSE");
-    // formData.append("division", "A");
+    attendanceFile.forEach((file) => {
+      formData.append("images", file);
+    });
 
     try {
       setUploadingAttendance(true);
@@ -247,7 +256,7 @@ export default function TeacherDashboard() {
 
       toast.success("Attendance marked successfully");
       console.log(res.data);
-      setAttendanceFile(null);
+      setAttendanceFile([]);
     } catch (err) {
       console.error(err);
       toast.error("Attendance marking failed");
@@ -356,177 +365,236 @@ export default function TeacherDashboard() {
       <div className="flex-1 bg-gray-50 p-8 overflow-auto">
         {activeTab === "attendance" && (
           
-          // <div>
-          //   <div className=" justify-between items-center mb-6">
-          //     <h2 className="text-2xl font-bold">Take Attendance</h2>
-          //     <div className=" gap-2 items-center">
-          //       <FileUpload
-
-          //         onChange={(files) => setAttendanceFile(files?.[0] || null)}
-          //       />
-          //       <button
-          //         onClick={handleAttendanceFileUpload}
-          //         className="bg-indigo-600 text-white px-4 py-2 rounded-lg flex items-center space-x-2 disabled:opacity-50 hover:bg-indigo-900"
-          //         disabled={uploadingAttendance}
-          //       >
-          //         <Camera className="w-5 h-5" />
-          //         <span>{uploadingAttendance ? "Uploading..." : "Upload & Mark"}</span>
-          //       </button>
-          //     </div>
-          //   </div>
-          // </div>
           <div>
-      
-          
-          <div className="flex flex-col md:flex-row justify-around gap-4 ">
-   
-            <div className="flex flex-col items-center">
-              <FileUpload
-                onChange={(files) => setAttendanceFile(files?.[0] || null)}
-              />
-              <button
-                onClick={handleAttendanceFileUpload}
-                className="bg-indigo-600 text-white px-4 py-2 rounded-lg flex items-center space-x-2 disabled:opacity-50 hover:bg-indigo-900 mt-2"
-                disabled={uploadingAttendance}
-              >
-                <Camera className="w-5 h-5" />
-                <span>
-                  {uploadingAttendance ? "Uploading..." : "Upload & Mark"}
-                </span>
-              </button>
-            </div>
+            <div className="flex flex-col md:flex-row justify-around gap-4 ">
+              <div className="flex flex-col items-center">
+                {/* <FileUpload
+                onChange={(files) => setAttendanceFile(files || null)}
+              /> */}
+                <label className="text-md font-medium mb-2 text-gray-700">
+                  Upload student face images
+                </label>
 
-            <div className="flex flex-col items-center">
-              <Webcam
-                ref={webcamRef}
-                screenshotFormat="image/jpeg"
-                className="rounded-md border border-gray-300"
-                width={500}
-                height={500}
-              />
-              <button
-                onClick={handleCaptureAndUpload}
-                className="mt-2 bg-green-600 text-white px-4 py-2 rounded-lg flex items-center space-x-2 hover:bg-green-800 disabled:opacity-50"
-                disabled={uploadingAttendance}
-              >
-                <Camera className="w-5 h-5" />
-                <span>
-                  {uploadingAttendance ? "Uploading..." : "Capture & Mark"}
-                </span>
-              </button>
+                <input
+                  type="file"
+                  multiple
+                  accept="image/*"
+                  onChange={handleFileChange}
+                  className="block w-full text-sm text-gray-900 border border-gray-300 rounded-lg cursor-pointer bg-white focus:outline-none file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
+                />
+
+                {attendanceFile.length > 0 ? (
+                  <div className="mt-3 w-full px-2 text-sm text-gray-600">
+                    <p className="font-medium">Selected files:</p>
+                    <ul className="list-disc list-inside">
+                      {attendanceFile.map((file, idx) => (
+                        <li key={idx}>{file.name}</li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : (
+                  <p className="mt-2 text-sm text-gray-500 italic">
+                    No files selected yet.
+                  </p>
+                )}
+
+                <button
+                  onClick={handleAttendanceFileUpload}
+                  className="bg-indigo-600 text-white px-4 py-2 rounded-lg flex items-center space-x-2 disabled:opacity-50 hover:bg-indigo-900 mt-2"
+                  disabled={uploadingAttendance}
+                >
+                  <Camera className="w-5 h-5" />
+                  <span>
+                    {uploadingAttendance ? "Uploading..." : "Upload & Mark"}
+                  </span>
+                </button>
+              </div>
+
+              <div className="flex flex-col items-center">
+                <Webcam
+                  ref={webcamRef}
+                  screenshotFormat="image/jpeg"
+                  className="rounded-md border border-gray-300"
+                  width={500}
+                  height={500}
+                />
+                <button
+                  onClick={handleCaptureAndUpload}
+                  className="mt-2 bg-green-600 text-white px-4 py-2 rounded-lg flex items-center space-x-2 hover:bg-green-800 disabled:opacity-50"
+                  disabled={uploadingAttendance}
+                >
+                  <Camera className="w-5 h-5" />
+                  <span>
+                    {uploadingAttendance ? "Uploading..." : "Capture & Mark"}
+                  </span>
+                </button>
+              </div>
             </div>
-          </div>
-          <Card className="mt-6">
-  <CardHeader>
-    <h2 className="text-xl font-semibold">Attendance Instructions</h2>
-  </CardHeader>
-  <CardContent>
-    <ul className="list-disc list-inside space-y-2 text-sm text-muted-foreground">
-      <li>Select the date and time range before uploading an image.</li>
-      <li>Ensure the uploaded classroom image is clear and well-lit.</li>
-      <li>Image must show full student faces for accurate recognition.</li>
-      <li>Click "Upload & Mark" to process and record attendance.</li>
-      <li>Wait for confirmation before uploading another image.</li>
-      <li>Use the "Export CSV" button to download attendance history.</li>
-      <li>If students are not recognized, ensure their training data is added.</li>
-      <li>Always refresh the page after uploading or marking attendance.</li>
-    </ul>
-  </CardContent>
-</Card>
+            <Card className="mt-6">
+              <CardHeader>
+                <h2 className="text-xl font-semibold">
+                  Attendance Instructions
+                </h2>
+              </CardHeader>
+              <CardContent>
+                <ul className="list-disc list-inside space-y-2 text-sm text-muted-foreground">
+                  <li>
+                    Select the date and time range before uploading an image.
+                  </li>
+                  <li>
+                    Ensure the uploaded classroom image is clear and well-lit.
+                  </li>
+                  <li>
+                    Image must show full student faces for accurate recognition.
+                  </li>
+                  <li>
+                    Click "Upload & Mark" to process and record attendance.
+                  </li>
+                  <li>Wait for confirmation before uploading another image.</li>
+                  <li>
+                    Use the "Export CSV" button to download attendance history.
+                  </li>
+                  <li>
+                    If students are not recognized, ensure their training data
+                    is added.
+                  </li>
+                  <li>
+                    Always refresh the page after uploading or marking
+                    attendance.
+                  </li>
+                </ul>
+              </CardContent>
+            </Card>
           </div>
         )}
-      {activeTab === "students" && (
-  <div className="space-y-8 mt-8">
-    {/* Upload Card */}
-    <Card className="p-8 bg-white border border-gray-200 shadow-md rounded-lg">
-      <h2 className="text-3xl font-bold text-gray-800 mb-6">📤 Upload Trained Model</h2>
+        {activeTab === "students" && (
+          <div className="space-y-8 mt-8">
+            {/* Upload Card */}
+            <Card className="p-8 bg-white border border-gray-200 shadow-md rounded-lg">
+              <h2 className="text-3xl font-bold text-gray-800 mb-6">
+                📤 Upload Trained Model
+              </h2>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Department */}
-        <div>
-          <label className="block mb-2 text-sm font-medium text-gray-700">Department</label>
-          <input
-            type="text"
-            value={uploadDepartment}
-            onChange={(e) => setUploadDepartment(e.target.value)}
-            placeholder="e.g., CS"
-            className="w-full px-4 py-2 rounded-md border border-gray-300 bg-white text-gray-800 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-          />
-        </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Department */}
+                <div>
+                  <label className="block mb-2 text-sm font-medium text-gray-700">
+                    Department
+                  </label>
+                  <input
+                    type="text"
+                    value={uploadDepartment}
+                    onChange={(e) => setUploadDepartment(e.target.value)}
+                    placeholder="e.g., CS"
+                    className="w-full px-4 py-2 rounded-md border border-gray-300 bg-white text-gray-800 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                  />
+                </div>
 
-        {/* Division */}
-        <div>
-          <label className="block mb-2 text-sm font-medium text-gray-700">Division</label>
-          <input
-            type="text"
-            value={uploadDivision}
-            onChange={(e) => setUploadDivision(e.target.value)}
-            placeholder="e.g., A"
-            className="w-full px-4 py-2 rounded-md border border-gray-300 bg-white text-gray-800 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-          />
-        </div>
-      </div>
+                {/* Division */}
+                <div>
+                  <label className="block mb-2 text-sm font-medium text-gray-700">
+                    Division
+                  </label>
+                  <input
+                    type="text"
+                    value={uploadDivision}
+                    onChange={(e) => setUploadDivision(e.target.value)}
+                    placeholder="e.g., A"
+                    className="w-full px-4 py-2 rounded-md border border-gray-300 bg-white text-gray-800 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                  />
+                </div>
+              </div>
 
-      {/* File Upload */}
-      <div className="mt-6">
-        <label className="block mb-2 text-sm font-medium text-gray-700">Upload `.pkl` Model File</label>
-        <input
-          type="file"
-          accept=".pkl"
-          className="block w-full text-sm text-gray-700 file:mr-4 file:py-2 file:px-4
+              {/* File Upload */}
+              <div className="mt-6">
+                <label className="block mb-2 text-sm font-medium text-gray-700">
+                  Upload `.pkl` Model File
+                </label>
+                <input
+                  type="file"
+                  accept=".pkl"
+                  className="block w-full text-sm text-gray-700 file:mr-4 file:py-2 file:px-4
                      file:rounded-md file:border-0 file:text-sm file:font-medium
                      file:bg-indigo-600 file:text-white hover:file:bg-indigo-500"
-          onChange={(e) => {
-            const file = e.target.files?.[0] || null;
-            setModelFile(file);
-          }}
-        />
-        {modelFile && (
-          <p className="mt-2 text-sm text-gray-600">📄 {modelFile.name}</p>
+                  onChange={(e) => {
+                    const file = e.target.files?.[0] || null;
+                    setModelFile(file);
+                  }}
+                />
+                {modelFile && (
+                  <p className="mt-2 text-sm text-gray-600">
+                    📄 {modelFile.name}
+                  </p>
+                )}
+              </div>
+
+              {/* Upload Button */}
+              <div className="mt-6 text-right">
+                <button
+                  onClick={handleModelUpload}
+                  disabled={
+                    !modelFile ||
+                    !uploadDepartment ||
+                    !uploadDivision ||
+                    isUploading
+                  }
+                  className={`px-6 py-2 rounded-md font-semibold text-white transition duration-200 ${
+                    isUploading ||
+                    !modelFile ||
+                    !uploadDepartment ||
+                    !uploadDivision
+                      ? "bg-gray-400 cursor-not-allowed"
+                      : "bg-indigo-600 hover:bg-indigo-500"
+                  }`}
+                >
+                  {isUploading ? "Uploading..." : "Upload Model"}
+                </button>
+              </div>
+            </Card>
+
+            {/* Instruction Card */}
+            <Card className="p-6 bg-white border border-gray-200 shadow-sm rounded-lg">
+              <CardHeader>
+                <h2 className="text-xl font-semibold text-gray-800">
+                  📘 Model Upload Instructions
+                </h2>
+              </CardHeader>
+              <CardContent>
+                <ul className="list-disc list-inside space-y-2 text-sm text-gray-700">
+                  <li>
+                    Train your face recognition model externally (e.g., using
+                    Python + sklearn).
+                  </li>
+                  <li>
+                    Ensure the model is saved as a `.pkl` file and supports
+                    inference properly.
+                  </li>
+                  <li>Fill in Department and Division (e.g., CS, A).</li>
+                  <li>
+                    Click the "Upload Model" button to upload the trained `.pkl`
+                    file to the server.
+                  </li>
+                  <li>
+                    This model will be used to recognize faces in the uploaded
+                    student images.
+                  </li>
+                  <li>
+                    You can replace/update the model anytime by uploading a new
+                    `.pkl` file.
+                  </li>
+                  <li>
+                    Ensure model compatibility with your backend inference
+                    logic.
+                  </li>
+                  <li>
+                    Once uploaded, test recognition via the "Mark Attendance"
+                    tab.
+                  </li>
+                </ul>
+              </CardContent>
+            </Card>
+          </div>
         )}
-      </div>
-
-      {/* Upload Button */}
-      <div className="mt-6 text-right">
-        <button
-          onClick={handleModelUpload}
-          disabled={!modelFile || !uploadDepartment || !uploadDivision || isUploading}
-          className={`px-6 py-2 rounded-md font-semibold text-white transition duration-200 ${
-            isUploading || !modelFile || !uploadDepartment || !uploadDivision
-              ? "bg-gray-400 cursor-not-allowed"
-              : "bg-indigo-600 hover:bg-indigo-500"
-          }`}
-        >
-          {isUploading ? "Uploading..." : "Upload Model"}
-        </button>
-      </div>
-    </Card>
-
-    {/* Instruction Card */}
-    <Card className="p-6 bg-white border border-gray-200 shadow-sm rounded-lg">
-      <CardHeader>
-        <h2 className="text-xl font-semibold text-gray-800">📘 Model Upload Instructions</h2>
-      </CardHeader>
-      <CardContent>
-        <ul className="list-disc list-inside space-y-2 text-sm text-gray-700">
-          <li>Train your face recognition model externally (e.g., using Python + sklearn).</li>
-          <li>Ensure the model is saved as a `.pkl` file and supports inference properly.</li>
-          <li>Fill in Department and Division (e.g., CS, A).</li>
-          <li>Click the "Upload Model" button to upload the trained `.pkl` file to the server.</li>
-          <li>This model will be used to recognize faces in the uploaded student images.</li>
-          <li>You can replace/update the model anytime by uploading a new `.pkl` file.</li>
-          <li>Ensure model compatibility with your backend inference logic.</li>
-          <li>Once uploaded, test recognition via the "Mark Attendance" tab.</li>
-        </ul>
-      </CardContent>
-    </Card>
-  </div>
-)}
-
-
-
-       
-      
 
         {activeTab === "history" && (
           <div>
@@ -589,17 +657,17 @@ export default function TeacherDashboard() {
                       <th className="px-4 py-3 text-left">Name</th>
                       <th className="px-4 py-3 text-left">Time</th>
 
-                      <th className="px-4 py-3 text-left">Email</th>
+                      {/* <th className="px-4 py-3 text-left">Email</th>
                       <th className="px-4 py-3 text-left">uid</th>
-                      <th className="px-4 py-3 text-left">Time</th>
+                      <th className="px-4 py-3 text-left">Time</th> */}
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
                     {attendanceHistory.map((rec, idx) => (
                       <tr key={idx}>
                         <td className="px-4 py-3">{rec.name}</td>
-                        <td className="px-4 py-3">{rec.email}</td>
-                        <td className="px-4 py-3">{rec.uid}</td>
+                        {/* <td className="px-4 py-3">{rec.email}</td>
+                        <td className="px-4 py-3">{rec.uid}</td> */}
                         <td className="px-4 py-3">{rec.time}</td>
                       </tr>
                     ))}
