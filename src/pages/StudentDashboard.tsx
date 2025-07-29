@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
-import { Camera, History, User } from 'lucide-react';
+import { History, User } from 'lucide-react';
 import { origin } from '@/lib/constants';
 
 type Student = {
@@ -27,6 +27,7 @@ const StudentDashboard: React.FC = () => {
   const [student, setStudent] = useState<Student | null>(null);
   const [attendance, setAttendance] = useState<AttendanceRecord[]>([]);
   const [profileImage, setProfileImage] = useState<string | null>(null);
+  setProfileImage(null);
   // const [imageGallery, setImageGallery] = useState<string[]>([]);
 
   const studentId = localStorage.getItem('uid');
