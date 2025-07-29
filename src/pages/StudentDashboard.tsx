@@ -27,8 +27,9 @@ const StudentDashboard: React.FC = () => {
   const [student, setStudent] = useState<Student | null>(null);
   const [attendance, setAttendance] = useState<AttendanceRecord[]>([]);
   const [profileImage, setProfileImage] = useState<string | null>(null);
+useEffect(() => {
   setProfileImage(null);
-  // const [imageGallery, setImageGallery] = useState<string[]>([]);
+}, []);  // const [imageGallery, setImageGallery] = useState<string[]>([]);
 
   const studentId = localStorage.getItem('uid');
   const token = localStorage.getItem('authToken');
