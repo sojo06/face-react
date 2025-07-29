@@ -19,17 +19,20 @@ const AuthPage = () => {
     password: "",
     role: "student",
     department: "",
-    division: ""
+    division: "",
+    rollNo: "", // <-- Add this line
   });
 
   const [loginData, setLoginData] = useState({
     email: "",
-    password: ""
+    password: "",
   });
 
   const [error, setError] = useState<string>("");
 
-  const handleSignupChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleSignupChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+  ) => {
     setSignupData({ ...signupData, [e.target.name]: e.target.value });
   };
 
@@ -39,8 +42,12 @@ const AuthPage = () => {
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log(signupData);
     try {
-      const response = await axios.post(`${origin}/api/auth/signup`, signupData);
+      const response = await axios.post(
+        `${origin}/api/auth/signup`,
+        signupData
+      );
       console.log("Signup Response:", response.data);
       toast.success("Signup successful! Please log in.");
     } catch (err) {
@@ -55,18 +62,18 @@ const AuthPage = () => {
     try {
       const response = await axios.post(`${origin}/api/auth/login`, loginData);
       const { token, user } = response.data;
-      localStorage.setItem('authToken', token);
-      localStorage.setItem('role', user.role);
-      localStorage.setItem('uid', user.id);
+      localStorage.setItem("authToken", token);
+      localStorage.setItem("role", user.role);
+      localStorage.setItem("uid", user.id);
       toast.success("Login successful! Redirecting...");
-      if (user.role === 'student') {
-        navigate('/student-dashboard');
-      } else if (user.role === 'teacher') {
-        navigate('/teacher-dashboard');
+      if (user.role === "student") {
+        navigate("/student-dashboard");
+      } else if (user.role === "teacher") {
+        navigate("/teacher-dashboard");
       }
     } catch (err) {
-      setError('Invalid credentials, please try again.');
-      toast.error('Invalid credentials, please try again.');
+      setError("Invalid credentials, please try again.");
+      toast.error("Invalid credentials, please try again.");
       console.error(err);
     }
   };
@@ -90,13 +97,21 @@ const AuthPage = () => {
       {/* Auth Form Container */}
       <div className="flex justify-center items-center py-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-md w-full bg-white p-8 rounded-lg shadow-md">
-          <h2 className="text-center text-2xl font-bold text-gray-800 mb-6">Welcome</h2>
+          <h2 className="text-center text-2xl font-bold text-gray-800 mb-6">
+            Welcome
+          </h2>
           <Tabs defaultValue="login" className="w-full">
             <TabsList className="grid grid-cols-2 mb-6 bg-gray-100 rounded-lg overflow-hidden">
-              <TabsTrigger value="login" className="py-2 text-gray-700 data-[state=active]:bg-indigo-600 data-[state=active]:text-white">
+              <TabsTrigger
+                value="login"
+                className="py-2 text-gray-700 data-[state=active]:bg-indigo-600 data-[state=active]:text-white"
+              >
                 Login
               </TabsTrigger>
-              <TabsTrigger value="signup" className="py-2 text-gray-700 data-[state=active]:bg-indigo-600 data-[state=active]:text-white">
+              <TabsTrigger
+                value="signup"
+                className="py-2 text-gray-700 data-[state=active]:bg-indigo-600 data-[state=active]:text-white"
+              >
                 Sign Up
               </TabsTrigger>
             </TabsList>
@@ -127,7 +142,9 @@ const AuthPage = () => {
                   />
                 </div>
                 {error && <p className="text-red-500 text-sm">{error}</p>}
-                <Button type="submit" className="w-full">Login</Button>
+                <Button type="submit" className="w-full">
+                  Login
+                </Button>
               </form>
             </TabsContent>
 
@@ -179,6 +196,19 @@ const AuthPage = () => {
                     <option value="teacher">Teacher</option>
                   </select>
                 </div>
+                {signupData.role === "student" && (
+                  <div>
+                    <Label htmlFor="rollNo">Roll No</Label>
+                    <Input
+                      id="rollNo"
+                      name="rollNo"
+                      value={signupData.rollNo}
+                      onChange={handleSignupChange}
+                      required
+                    />
+                  </div>
+                )}
+
                 <div>
                   <Label htmlFor="department">Department</Label>
                   <Input
@@ -200,7 +230,9 @@ const AuthPage = () => {
                   />
                 </div>
                 {error && <p className="text-red-500 text-sm">{error}</p>}
-                <Button type="submit" className="w-full">Sign Up</Button>
+                <Button type="submit" className="w-full">
+                  Sign Up
+                </Button>
               </form>
             </TabsContent>
           </Tabs>

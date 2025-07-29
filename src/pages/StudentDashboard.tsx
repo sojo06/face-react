@@ -11,13 +11,6 @@ type Student = {
   division: string;
 };
 
-type TrainingData = {
-  _id: string;
-  type: string;
-  status: string;
-  files: { url: string }[];
-  createdAt: string;
-};
 
 type AttendanceRecord = {
   _id: string;
@@ -25,12 +18,13 @@ type AttendanceRecord = {
   department: string;
   division: string;
   createdAt: string;
+  label:string,
+  subject:string
 };
 
 const StudentDashboard: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'profile' | 'training' | 'attendance'>('profile');
   const [student, setStudent] = useState<Student | null>(null);
-  const [trainingData, setTrainingData] = useState<TrainingData[]>([]);
   const [attendance, setAttendance] = useState<AttendanceRecord[]>([]);
   const [profileImage, setProfileImage] = useState<string | null>(null);
   // const [imageGallery, setImageGallery] = useState<string[]>([]);
@@ -48,23 +42,18 @@ const StudentDashboard: React.FC = () => {
       if (!studentId) return;
 
       try {
-        const [profileRes, trainingRes, attendanceRes] = await Promise.all([
+        const [profileRes, attendanceRes] = await Promise.all([
           api.get(`/profile`),
-          api.get(`/training-data`),
           api.get(`/attendance`)
         ]);
 
         setStudent(profileRes.data);
-        setTrainingData(trainingRes.data);
         setAttendance(attendanceRes.data);
 
         // Extract image URLs
-        const allImages = trainingRes.data.flatMap((item: TrainingData) =>
-          item.type === 'image' ? item.files.map(file => file.url) : []
-        );
+       
 
         // setImageGallery(allImages.slice(0, 4)); // first 4 for gallery
-        if (allImages.length > 0) setProfileImage(allImages[0]); // first for profile
       } catch (err) {
         console.error('Error loading student data:', err);
       }
@@ -107,7 +96,7 @@ const StudentDashboard: React.FC = () => {
       <User className="w-5 h-5" />
       <span>Profile</span>
     </button>
-    <button
+    {/* <button
       onClick={() => setActiveTab('training')}
       className={`flex items-center space-x-2 w-full p-3 rounded-lg ${
         activeTab === 'training' ? 'bg-indigo-50 text-indigo-600' : 'hover:bg-gray-50'
@@ -115,7 +104,7 @@ const StudentDashboard: React.FC = () => {
     >
       <Camera className="w-5 h-5" />
       <span>Training Data</span>
-    </button>
+    </button> */}
     <button
       onClick={() => setActiveTab('attendance')}
       className={`flex items-center space-x-2 w-full p-3 rounded-lg ${
@@ -167,40 +156,7 @@ const StudentDashboard: React.FC = () => {
           </div>
         )}
 
-{activeTab === 'training' && (
-  <div>
-    <h2 className="text-2xl font-bold mb-6">Training Data</h2>
 
-    {/* Display all training images grouped by trainingData entries */}
-    <div className="space-y-8">
-      {trainingData.map((data) => (
-        <div key={data._id} className="bg-white p-6 rounded-lg shadow o">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <p className="text-lg font-semibold">{data.type.toUpperCase()} • {data.status}</p>
-              <p className="text-sm text-gray-500">{data.files.length} file(s) • Uploaded on {new Date(data.createdAt).toLocaleDateString()}</p>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-            {data.files.map((file, idx) => (
-              <div
-                key={idx}
-                className="border rounded overflow-hidden shadow-sm hover:shadow-md transition"
-              >
-                <img
-                  src={file.url}
-                  alt={`Training File ${idx + 1}`}
-                  className="w-full h-36 object-contain"
-                />
-              </div>
-            ))}
-          </div>
-        </div>
-      ))}
-    </div>
-  </div>
-)}
 
         {activeTab === 'attendance' && (
           <div>
@@ -209,15 +165,28 @@ const StudentDashboard: React.FC = () => {
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
+                    {/* <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">label</th> */}
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Subject</th>
+
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
+                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">time</th>
+
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Department</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Division</th>
+
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {attendance.map((record) => (
                     <tr key={record._id}>
+                      {/* <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{record.label}</td> */}
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{record.subject}</td>
+
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{record.date}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {new Date(record.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </td>
+
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{record.department}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{record.division}</td>
                     </tr>

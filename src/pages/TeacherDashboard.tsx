@@ -9,7 +9,13 @@ import { toast } from "react-hot-toast";
 import Webcam from "react-webcam"; // ✅ NEW
 import { useRef } from "react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-
+interface UploadedModel {
+  modelName: string;
+  department: string;
+  division: string;
+  filePath: string;
+  createdAt: string;
+}
 // interface Student {
 //   student: {
 //     _id: string;
@@ -47,6 +53,13 @@ export default function TeacherDashboard() {
     fromTime: "",
     toTime: "",
   });
+  const [department, setDepartment] = useState("");
+  const [division, setDivision] = useState("");
+  const [subject, setSubject] = useState("");
+
+  const [uploadedModels, setUploadedModels] = useState<UploadedModel[]>([]);
+  const [showModelList, setShowModelList] = useState(false);
+
   const [modelFile, setModelFile] = useState<File | null>(null);
   const [uploadDepartment, setUploadDepartment] = useState("");
   const [uploadDivision, setUploadDivision] = useState("");
@@ -70,6 +83,26 @@ export default function TeacherDashboard() {
   //     fetchSummary();
   //   }
   // }, [activeTab]);
+  const fetchUploadedModels = async () => {
+    try {
+      console.log("wkdwjdj");
+      const response = await axios.get(
+        `${origin}/api/teacher/uploaded-models`,
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("authToken")}`,
+            "Content-Type": "multipart/form-data",
+          },
+        }
+      ); // adjust base URL if needed
+      console.log(response.data);
+      setUploadedModels(response.data);
+      setShowModelList(true);
+    } catch (error) {
+      console.error("Error fetching model list:", error);
+    }
+  };
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files) {
@@ -134,15 +167,22 @@ export default function TeacherDashboard() {
         }
       );
 
+      console.log(res);
+      setIsUploading(false);
+
       if (res.status === 200) {
         toast.success("Model uploaded successfully!");
-        setModelFile(null);
-        setUploadDepartment("");
-        setUploadDivision("");
+        // setModelFile(null);
+        // setUploadDepartment("");
+        // setUploadDivision("");
+        setIsUploading(false);
       } else {
         toast.error("Model upload failed.");
+        setIsUploading(false);
       }
     } catch (error: any) {
+      setIsUploading(false);
+
       console.error("Error uploading model:", error);
       toast.error(error?.response?.data?.error || "Error uploading model.");
     } finally {
@@ -232,14 +272,18 @@ export default function TeacherDashboard() {
   // };
 
   const handleAttendanceFileUpload = async () => {
-    if (!attendanceFile) {
+    if (!attendanceFile||!subject||!department||!division) {
       return toast.error("Please select an image to mark attendance.");
     }
 
     const formData = new FormData();
     attendanceFile.forEach((file) => {
       formData.append("images", file);
+      
     });
+    formData.append("subject",subject);
+      formData.append("division",division);
+      formData.append("department",department);
 
     try {
       setUploadingAttendance(true);
@@ -364,7 +408,6 @@ export default function TeacherDashboard() {
       {/* Main Content */}
       <div className="flex-1 bg-gray-50 p-8 overflow-auto">
         {activeTab === "attendance" && (
-          
           <div>
             <div className="flex flex-col md:flex-row justify-around gap-4 ">
               <div className="flex flex-col items-center">
@@ -374,6 +417,47 @@ export default function TeacherDashboard() {
                 <label className="text-md font-medium mb-2 text-gray-700">
                   Upload student face images
                 </label>
+                <div className="mb-4 w-full">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Department
+                  </label>
+                  <input
+                    type="text"
+                    value={department}
+                    onChange={(e) => setDepartment(e.target.value)}
+                    placeholder="e.g. Computer"
+                    className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                    required
+                  />
+                </div>
+
+                <div className="mb-4 w-full">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Division
+                  </label>
+                  <input
+                    type="text"
+                    value={division}
+                    onChange={(e) => setDivision(e.target.value)}
+                    placeholder="e.g. A"
+                    className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                    required
+                  />
+                </div>
+
+                <div className="mb-4 w-full">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Subject
+                  </label>
+                  <input
+                    type="text"
+                    value={subject}
+                    onChange={(e) => setSubject(e.target.value)}
+                    placeholder="e.g. DBMS"
+                    className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                    required
+                  />
+                </div>
 
                 <input
                   type="file"
@@ -549,8 +633,39 @@ export default function TeacherDashboard() {
                 >
                   {isUploading ? "Uploading..." : "Upload Model"}
                 </button>
+                {/* Fetch Uploaded Models */}
+              </div>
+              <div className="mt-4 text-right">
+                <button
+                  onClick={fetchUploadedModels}
+                  className="px-5 py-2 rounded-md bg-blue-600 text-white hover:bg-blue-500"
+                >
+                  📄 Show Uploaded Models
+                </button>
               </div>
             </Card>
+            {showModelList && uploadedModels.length > 0 && (
+              <div className="p-6 bg-white border border-gray-200 shadow-sm rounded-lg">
+                <h2 className="text-xl font-semibold text-gray-800 mb-4">
+                  📋 Uploaded Models
+                </h2>
+                <ul className="divide-y divide-gray-200 border rounded-md">
+                  {uploadedModels.map((model, index) => (
+                    <li key={index} className="px-4 py-3">
+                      <div className="font-medium text-gray-800">
+                        {model.modelName}
+                      </div>
+                      <div className="text-sm text-gray-600">
+                        Dept: {model.department} | Div: {model.division}
+                      </div>
+                      <div className="text-xs text-gray-400">
+                        Uploaded: {new Date(model.createdAt).toLocaleString()}
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
 
             {/* Instruction Card */}
             <Card className="p-6 bg-white border border-gray-200 shadow-sm rounded-lg">
